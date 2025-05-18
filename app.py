@@ -6,10 +6,15 @@ from tensorflow.keras.datasets import imdb
 import re
 import nltk
 from nltk.tokenize import word_tokenize
+from spellchecker import SpellChecker  
 
+# Download NLTK data
 nltk.download('punkt', quiet=True)
 
 app = Flask(__name__)
+
+# Initialize spell checker
+spell = SpellChecker()
 
 # Load the saved model
 try:
@@ -22,30 +27,33 @@ except Exception as e:
 word_index = imdb.get_word_index()
 max_review_length = 500
 top_words = 5000
+min_words = 15  # Minimum words for reliable analysis
 
 def preprocess_text(text):
-    # Clean text: normalize spaces, remove non-ASCII, punctuation
-    text = re.sub(r'[^\x00-\x7F]+', ' ', text)  # Remove non-ASCII (e.g., emojis)
-    text = re.sub(r'[^\w\s]', '', text.lower().strip())  # Remove punctuation
-    text = re.sub(r'\s+', ' ', text)  # Normalize multiple spaces
+    # Normalize text: remove excessive spaces, punctuation, and convert to lowercase
+    text = re.sub(r'\s+', ' ', text.strip())  # Normalize spaces
+    text = re.sub(r'[^\w\s]', '', text.lower())  # Remove punctuation
     # Tokenize using NLTK
     words = word_tokenize(text)
-    if len(words) < 3:
-        return None, text, "Input must contain at least 3 words."
+    # Spell check and suggest corrections
+    misspelled = spell.unknown(words)
+    corrections = {word: spell.correction(word) for word in misspelled if spell.correction(word)}
+    # Capitalize first word for natural text
+    if words:
+        words[0] = words[0].capitalize()
     # Map words to IMDB indices, adjusting for offset
     sequence = []
     for word in words:
-        idx = word_index.get(word, 0)
+        idx = word_index.get(word.lower(), 0)  # Use lowercase for consistency
         if idx > 0 and idx < top_words:
-            adjusted_idx = idx + 3
+            adjusted_idx = idx + 3  # Adjust for IMDB offset (0: pad, 1: start, 2: unk)
             if adjusted_idx < top_words:
                 sequence.append(adjusted_idx)
         else:
             sequence.append(2)  # Unknown words
     # Pad sequence
     sequence = pad_sequences([sequence], maxlen=max_review_length, padding='pre', truncating='pre')
-    # print("Preprocessed sequence:", sequence)  # Debug
-    return sequence, text, None
+    return sequence, corrections, words
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -53,31 +61,32 @@ def index():
     confidence = None
     emoji = None
     error = None
-    raw_output = None
-    cleaned_input = None
+    corrections = None
+    word_count = 0
 
     if request.method == 'POST':
         review = request.form.get('review')
-        if not review or len(review.strip()) == 0:
-            error = "Please enter a valid review."
+        if not review or len(review.strip()) < 10:
+            error = "Please enter a review with at least 10 characters."
         else:
             try:
-                sequence, cleaned_input, preprocess_error = preprocess_text(review)
-                if preprocess_error:
-                    error = preprocess_error
+                # Preprocess and predict
+                sequence, corrections, words = preprocess_text(review)
+                word_count = len(words)
+                if word_count < min_words:
+                    error = f"Review is too short ({word_count} words). Please use at least {min_words} words for accurate results."
                 else:
                     prediction = model.predict(sequence, verbose=0)[0][0]
-                    raw_output = float(prediction)
                     confidence = prediction if prediction > 0.5 else 1 - prediction
                     sentiment = 'Positive' if prediction > 0.5 else 'Negative'
                     emoji = '😊' if sentiment == 'Positive' else '😔'
-                    confidence = min(confidence, 0.9999)
-                    if len(word_tokenize(cleaned_input)) < 5:
-                        error = "Short review (<5 words). Results may be less accurate."
+                    confidence = min(confidence, 0.9999)  # Cap confidence for UI
+                    if corrections:
+                        error = "Possible spelling errors detected. See suggestions below."
             except Exception as e:
-                error = f"Error processing review: {str(e)}. Try using clear English text without special characters."
+                error = f"Error processing review: {str(e)}"
 
-    return render_template('index.html', sentiment=sentiment, confidence=confidence, emoji=emoji, error=error, raw_output=raw_output, cleaned_input=cleaned_input)
+    return render_template('index.html', sentiment=sentiment, confidence=confidence, emoji=emoji, error=error, corrections=corrections, word_count=word_count, min_words=min_words)
 
 if __name__ == '__main__':
     app.run(debug=True)
