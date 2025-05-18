@@ -10,7 +10,7 @@ Minimum Word Requirement: Ensures reviews have at least 15 words for reliable pr
 
 Model Details
 
-Architecture: 
+Architecture:
 Embedding layer with pre-trained GloVe (100D) embeddings.
 Conv1D with 64 filters, followed by MaxPooling.
 Two Bidirectional LSTM layers (128 and 64 units) with dropout (0.3).
@@ -90,3 +90,15 @@ Flask: Web framework for the application.
 TensorFlow: For loading and running the trained model.
 NLTK: For text tokenization.
 pyspellchecker: For spell-checking and suggestions.
+
+Notes
+
+The model expects reviews to be in English and similar in style to IMDB reviews.
+Short reviews (<15 words) may yield less accurate results and will trigger a warning.
+The GloVe embeddings used in the model are not included in this repository but are loaded during training (see notebook).
+For production, consider using a WSGI server like Gunicorn instead of Flask's debug server.
+
+Contributing
+Contributions are welcome! Please open an issue or submit a pull request with improvements or bug fixes.
+License
+This project is licensed under the MIT License.
