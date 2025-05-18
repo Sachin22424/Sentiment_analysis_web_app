@@ -1,0 +1,31 @@
+/* Custom styles to enhance Tailwind */
+textarea {
+    resize: vertical;
+    min-height: 120px;
+    transition: border-color 0.3s ease;
+}
+
+button:hover {
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.bg-gradient-to-r {
+    background-image: linear-gradient(to right, #60a5fa, #a855f7);
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.border-green-500:focus {
+    border-color: #10b981 !important;
+}
+
+.border-red-500:focus {
+    border-color: #ef4444 !important;
+}
