@@ -49,12 +49,15 @@
         <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-500"></div>
     </div>
 
+    <!-- ...existing code... -->
     <script>
         const form = document.querySelector('#reviewForm');
         const textarea = document.querySelector('#review');
         const submitBtn = document.querySelector('#submitBtn');
         const wordCountSpan = document.querySelector('#count');
         const loading = document.querySelector('#loading');
+        // Set the minimum words for button activation (4 or 5)
+        const minActiveWords = 4; // Change to 5 if you want 5 words minimum
         const minWords = {{ min_words }};
 
         function updateWordCount() {
@@ -62,7 +65,8 @@
             const words = text ? text.split(/\s+/).filter(w => w.length > 0).length : 0;
             wordCountSpan.textContent = words;
             wordCountSpan.parentElement.classList.toggle('text-red-500', words < minWords);
-            submitBtn.disabled = words < minWords || text.length < 10;
+            // Enable button after 4 (or 5) words, but keep backend min_words check for accuracy
+            submitBtn.disabled = words < minActiveWords || text.length < 10;
             submitBtn.classList.toggle('opacity-50', submitBtn.disabled);
             submitBtn.classList.toggle('cursor-not-allowed', submitBtn.disabled);
         }
@@ -83,5 +87,6 @@
         // Initial update
         updateWordCount();
     </script>
+<!-- ...existing code... -->
 </body>
 </html>
