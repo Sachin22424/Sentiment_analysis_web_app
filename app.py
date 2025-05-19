@@ -27,31 +27,25 @@ except Exception as e:
 word_index = imdb.get_word_index()
 max_review_length = 500
 top_words = 5000
-min_words = 15  # Minimum words for reliable analysis
+min_words = 15
 
 def preprocess_text(text):
-    # Normalize text: remove excessive spaces, punctuation, and convert to lowercase
-    text = re.sub(r'\s+', ' ', text.strip())  # Normalize spaces
-    text = re.sub(r'[^\w\s]', '', text.lower())  # Remove punctuation
-    # Tokenize using NLTK
+    text = re.sub(r'\s+', ' ', text.strip())
+    text = re.sub(r'[^\w\s]', '', text.lower())
     words = word_tokenize(text)
-    # Spell check and suggest corrections
     misspelled = spell.unknown(words)
     corrections = {word: spell.correction(word) for word in misspelled if spell.correction(word)}
-    # Capitalize first word for natural text
     if words:
         words[0] = words[0].capitalize()
-    # Map words to IMDB indices, adjusting for offset
     sequence = []
     for word in words:
-        idx = word_index.get(word.lower(), 0)  # Use lowercase for consistency
+        idx = word_index.get(word.lower(), 0)
         if idx > 0 and idx < top_words:
-            adjusted_idx = idx + 3  # Adjust for IMDB offset (0: pad, 1: start, 2: unk)
+            adjusted_idx = idx + 3
             if adjusted_idx < top_words:
                 sequence.append(adjusted_idx)
         else:
-            sequence.append(2)  # Unknown words
-    # Pad sequence
+            sequence.append(2)
     sequence = pad_sequences([sequence], maxlen=max_review_length, padding='pre', truncating='pre')
     return sequence, corrections, words
 
@@ -63,14 +57,15 @@ def index():
     error = None
     corrections = None
     word_count = 0
+    review_text = ''
 
     if request.method == 'POST':
         review = request.form.get('review')
+        review_text = review  # Preserve the input text
         if not review or len(review.strip()) < 10:
             error = "Please enter a review with at least 10 characters."
         else:
             try:
-                # Preprocess and predict
                 sequence, corrections, words = preprocess_text(review)
                 word_count = len(words)
                 if word_count < min_words:
@@ -80,13 +75,13 @@ def index():
                     confidence = prediction if prediction > 0.5 else 1 - prediction
                     sentiment = 'Positive' if prediction > 0.5 else 'Negative'
                     emoji = '😊' if sentiment == 'Positive' else '😔'
-                    confidence = min(confidence, 0.9999)  # Cap confidence for UI
+                    confidence = min(confidence, 0.9999)
                     if corrections:
                         error = "Possible spelling errors detected. See suggestions below."
             except Exception as e:
                 error = f"Error processing review: {str(e)}"
 
-    return render_template('index.html', sentiment=sentiment, confidence=confidence, emoji=emoji, error=error, corrections=corrections, word_count=word_count, min_words=min_words)
+    return render_template('index.html', sentiment=sentiment, confidence=confidence, emoji=emoji, error=error, corrections=corrections, word_count=word_count, min_words=min_words, review_text=review_text)
 
 if __name__ == '__main__':
     app.run(debug=True)

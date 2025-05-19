@@ -13,7 +13,7 @@
         <form method="POST" class="space-y-6" id="reviewForm">
             <div>
                 <label for="review" class="block text-sm font-medium text-gray-700">Enter your movie review:</label>
-                <textarea id="review" name="review" rows="5" class="mt-2 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-200" placeholder="Type your movie review here..." aria-describedby="wordCount" required></textarea>
+                <textarea id="review" name="review" rows="5" class="mt-2 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-200" placeholder="Type your movie review here..." aria-describedby="wordCount" required>{% if review_text %}{{ review_text }}{% endif %}</textarea>
                 <p id="wordCount" class="text-sm text-gray-500 mt-1">Words: <span id="count">0</span> (Minimum: {{ min_words }})</p>
             </div>
             <button type="submit" class="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-200" disabled id="submitBtn">Analyze Sentiment</button>
@@ -41,6 +41,7 @@
             <div class="mt-6 p-6 bg-gray-50 rounded-lg text-center transform transition-all duration-300 animate-fadeIn">
                 <p class="text-xl font-semibold text-gray-800">Sentiment: {{ sentiment }} {{ emoji }}</p>
                 <p class="text-sm text-gray-600 mt-2">Confidence: {{ "%.2f" % (confidence * 100) }}%</p>
+                <button onclick="resetForm()" class="mt-4 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-200">Try Another</button>
             </div>
         {% endif %}
     </div>
@@ -49,15 +50,13 @@
         <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-indigo-500"></div>
     </div>
 
-    <!-- ...existing code... -->
     <script>
         const form = document.querySelector('#reviewForm');
         const textarea = document.querySelector('#review');
         const submitBtn = document.querySelector('#submitBtn');
         const wordCountSpan = document.querySelector('#count');
         const loading = document.querySelector('#loading');
-        // Set the minimum words for button activation (4 or 5)
-        const minActiveWords = 4; // Change to 5 if you want 5 words minimum
+        const minActiveWords = 4;
         const minWords = {{ min_words }};
 
         function updateWordCount() {
@@ -65,10 +64,16 @@
             const words = text ? text.split(/\s+/).filter(w => w.length > 0).length : 0;
             wordCountSpan.textContent = words;
             wordCountSpan.parentElement.classList.toggle('text-red-500', words < minWords);
-            // Enable button after 4 (or 5) words, but keep backend min_words check for accuracy
             submitBtn.disabled = words < minActiveWords || text.length < 10;
             submitBtn.classList.toggle('opacity-50', submitBtn.disabled);
             submitBtn.classList.toggle('cursor-not-allowed', submitBtn.disabled);
+
+            const errorDiv = document.querySelector('.bg-red-50');
+            if (errorDiv && words < minWords) {
+                errorDiv.style.display = 'none';
+            } else if (errorDiv) {
+                errorDiv.style.display = '';
+            }
         }
 
         function replaceWord(original, suggestion) {
@@ -78,15 +83,25 @@
             updateWordCount();
         }
 
+        function resetForm() {
+            textarea.value = '';
+            updateWordCount();
+            const sentimentDiv = document.querySelector('.bg-gray-50');
+            const errorDiv = document.querySelector('.bg-red-50');
+            const correctionsDiv = document.querySelector('.bg-yellow-50');
+            if (sentimentDiv) sentimentDiv.remove();
+            if (errorDiv) errorDiv.remove();
+            if (correctionsDiv) correctionsDiv.remove();
+            textarea.focus();
+        }
+
         textarea.addEventListener('input', updateWordCount);
         form.addEventListener('submit', () => {
             loading.classList.remove('hidden');
             submitBtn.disabled = true;
         });
 
-        // Initial update
         updateWordCount();
     </script>
-<!-- ...existing code... -->
 </body>
 </html>
