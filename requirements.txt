@@ -3,3 +3,4 @@ numpy==1.24.3
 tensorflow==2.12.0
 nltk==3.8.1
 pyspellchecker==0.7.2
+gunicorn==21.2.0  # Required to serve Flask with Railway
